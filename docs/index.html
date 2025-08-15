@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kitsune Proxy Hub // Documentation</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div id="preloader">
+        <img src="kitsune-mask.svg" alt="Kitsune Mask Loading..." class="preloader-logo">
+        <p class="preloader-text">INITIALIZING CONNECTION...</p>
+    </div>
+
+    <main id="main-content">
+        <header class="main-header">
+            <img src="kitsune-mask.svg" alt="Kitsune Mask Logo" class="header-logo">
+            <h1>Kitsune Proxy Hub</h1>
+            <p class="tagline">「狐のプロキシ」// Your Gateway to the Unfiltered Web</p>
+        </header>
+
+        <section class="api-section">
+            <h2 data-text="[ Live Proxy ]">[ Live Proxy ]</h2>
+            <p>Stream konten secara langsung melalui server kami. Gunakan endpoint ini untuk akses sinkron dan cepat tanpa penyimpanan file.</p>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/proxy</span>
+            </div>
+            <h3>Query Parameters:</h3>
+            <ul>
+                <li><code>url</code> (required): URL lengkap dari sumber daya yang ingin Anda proxy.</li>
+            </ul>
+            <div class="code-block-container">
+                <h4>Contoh Penggunaan (cURL):</h4>
+                <pre><code class="language-bash">curl "<span class="dynamic-domain"></span>/proxy?url=https://api.ipify.org?format=json"</code></pre>
+                <button class="copy-btn">COPY</button>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2 data-text="[ Async Downloader ]">[ Async Downloader ]</h2>
+            <p>Untuk file besar atau download yang butuh waktu. Sistem ini bekerja di latar belakang. Anda meminta download, lalu memeriksa statusnya secara berkala.</p>
+            <h3 class="subsection-title">// Langkah 1: Meminta Download</h3>
+            <div class="endpoint">
+                <span class="method post">POST</span>
+                <span class="path">/api/request-download</span>
+            </div>
+            <h4>Body (JSON):</h4>
+            <div class="code-block-container">
+                <pre><code class="language-json">{
+    "link": "https_URL_FILE_TARGET",
+    "filenameHint": "nama_file_yang_diinginkan.zip",
+    "headers": { "Optional-Header": "value" }
+}</code></pre>
+                <button class="copy-btn">COPY</button>
+            </div>
+             <h4>Contoh Response:</h4>
+            <div class="code-block-container">
+                <pre><code class="language-json">{
+    "success": true,
+    "message": "Permintaan diterima! Gunakan pollingUrl untuk cek status.",
+    "jobId": "...",
+    "pollingUrl": "<span class="dynamic-domain"></span>/api/status/..."
+}</code></pre>
+                <button class="copy-btn">COPY</button>
+            </div>
+            <h3 class="subsection-title">// Langkah 2: Cek Status (Polling)</h3>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/api/status/:jobId</span>
+            </div>
+            <p>Gunakan <code>pollingUrl</code> dari response sebelumnya untuk memeriksa status job.</p>
+             <h4>Contoh Response (Completed):</h4>
+            <div class="code-block-container">
+                <pre><code class="language-json">{
+    "success": true,
+    "status": "completed",
+    "message": "Download Selesai!",
+    "downloadLink": "<span class="dynamic-domain"></span>/downloads/...",
+    "filename": "..."
+}</code></pre>
+                <button class="copy-btn">COPY</button>
+            </div>
+        </section>
+
+        <section class="api-section">
+            <h2 data-text="[ Stats Dashboard ]">[ Stats Dashboard ]</h2>
+            <p>Pantau aktivitas server secara real-time melalui dashboard web dan API statistik.</p>
+            <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/stats.html</span>
+            </div>
+            <p>Buka URL di atas di browser Anda untuk melihat dashboard visual.</p>
+            <br>
+             <div class="endpoint">
+                <span class="method get">GET</span>
+                <span class="path">/api/stats</span>
+            </div>
+             <p>Gunakan endpoint ini untuk mendapatkan data statistik mentah dalam format JSON.</p>
+        </section>
+        
+        <footer>
+            <p>&copy; 2024 Kitsune Proxy Hub // Connection Secured</p>
+        </footer>
+    </main>
+    <script src="script.js"></script>
+</body>
+</html>
