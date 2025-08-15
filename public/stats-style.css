@@ -1,0 +1,32 @@
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background-color: #121212;
+    color: #e0e0e0;
+    margin: 0;
+    padding: 20px;
+}
+.container { max-width: 900px; margin: 0 auto; }
+h1, h2 { color: #ffffff; border-bottom: 2px solid #333; padding-bottom: 10px; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; margin-bottom: 20px; }
+.card { background-color: #1e1e1e; border-radius: 8px; padding: 20px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); }
+.card p { margin: 10px 0; font-size: 1.1em; }
+.card span { font-weight: bold; color: #4CAF50; }
+#cpu, #mem { color: #2196F3; }
+.jobs-card h2 { margin-top: 0; }
+.job-item { background-color: #2a2a2a; border-left: 5px solid #666; padding: 15px; margin-bottom: 10px; border-radius: 5px; }
+.job-item.status-pending { border-color: #ffc107; }
+.job-item.status-downloading { border-color: #03a9f4; }
+.job-item.status-completed { border-color: #4caf50; }
+.job-item.status-failed { border-color: #f44336; }
+.job-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.job-filename { font-size: 1.1em; word-break: break-all; }
+.job-status { font-size: 0.8em; font-weight: bold; padding: 4px 8px; border-radius: 12px; background-color: #555; color: #fff; }
+.status-completed .job-status { background-color: #4caf50; }
+.status-failed .job-status { background-color: #f44336; }
+.status-downloading .job-status { background-color: #03a9f4; }
+.job-details { font-size: 0.9em; color: #bbb; display: flex; gap: 15px; align-items: center; }
+.job-details a { color: #8ab4f8; text-decoration: none; }
+.job-details a:hover { text-decoration: underline; }
+.error { color: #ff8a80; }
+.progress-bar { flex-grow: 1; height: 10px; background-color: #444; border-radius: 5px; overflow: hidden; }
+.progress { height: 100%; background-color: #03a9f4; transition: width 0.3s ease-in-out; }

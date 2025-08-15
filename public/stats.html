@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Status Dashboard</title>
+    <link rel="stylesheet" href="/stats-style.css"> <!-- <-- LINK SUDAH DIPERBAIKI -->
+</head>
+<body>
+    <div class="container">
+        <h1>Server Status Dashboard</h1>
+        
+        <div class="grid">
+            <div class="card">
+                <h2>Server Info</h2>
+                <p><strong>Uptime:</strong> <span id="uptime">Loading...</span></p>
+                <p><strong>CPU Usage:</strong> <span id="cpu">Loading...</span>%</p>
+                <p><strong>Memory Free:</strong> <span id="mem">Loading...</span>%</p>
+            </div>
+
+            <div class="card">
+                <h2>Live Proxy Stats</h2>
+                <p><strong>Total Requests:</strong> <span id="proxy-requests">0</span></p>
+                <p><strong>Data Transferred:</strong> <span id="proxy-data">0 MB</span></p>
+            </div>
+        </div>
+
+        <div class="card jobs-card">
+            <h2>Download Jobs (<span id="job-count">0</span>)</h2>
+            <div id="job-list">
+                <p>No active or recent jobs.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function formatBytes(bytes, decimals = 2) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const dm = decimals < 0 ? 0 : decimals;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+        }
+
+        async function fetchStats() {
+            try {
+                const response = await fetch('/api/stats');
+                const data = await response.json();
+
+                document.getElementById('uptime').textContent = data.uptime;
+                document.getElementById('cpu').textContent = (data.cpuUsage * 100).toFixed(2);
+                document.getElementById('mem').textContent = (data.memFree * 100).toFixed(2);
+                document.getElementById('proxy-requests').textContent = data.proxyStats.totalRequests;
+                document.getElementById('proxy-data').textContent = formatBytes(data.proxyStats.totalDataTransferred);
+                
+                const jobList = document.getElementById('job-list');
+                document.getElementById('job-count').textContent = data.jobs.total;
+                jobList.innerHTML = '';
+
+                if (data.jobs.all.length === 0) {
+                    jobList.innerHTML = '<p>No active or recent jobs.</p>';
+                    return;
+                }
+
+                data.jobs.all.forEach(job => {
+                    const jobElement = document.createElement('div');
+                    jobElement.className = `job-item status-${job.status}`;
+                    
+                    let content = `<div class="job-header"><strong class="job-filename">${job.filename}</strong><span class="job-status">${job.status.toUpperCase()}</span></div><div class="job-details"><span>ID: ${job.id.substring(0, 8)}</span>`;
+
+                    if (job.status === 'downloading') {
+                        content += `<div class="progress-bar"><div class="progress" style="width: ${job.progress}%"></div></div><span>${job.progress}%</span>`;
+                    } else if (job.status === 'completed') {
+                        content += `<a href="${job.finalUrl}" target="_blank">Download Link</a>`;
+                    } else if (job.status === 'failed') {
+                        content += `<span class="error">Error: ${job.error}</span>`;
+                    }
+                    
+                    content += '</div>';
+                    jobElement.innerHTML = content;
+                    jobList.appendChild(jobElement);
+                });
+
+            } catch (error) {
+                console.error('Failed to fetch stats:', error);
+            }
+        }
+
+        setInterval(fetchStats, 2000);
+        fetchStats();
+    </script>
+</body>
+</html>
