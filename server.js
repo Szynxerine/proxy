@@ -1,4 +1,5 @@
-// File: server.js (Versi Final Diperbaiki - KITSUNE PROXY HUB)
+//
+// File: server.js (Versi Final Diperbaiki & Ditingkatkan dengan Smart Redirect)
 
 import express from 'express';
 import axios from 'axios';
@@ -16,7 +17,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 4000;
 const TEMP_DIR = path.join(__dirname, 'temp_files');
 const PUBLIC_DIR = path.join(__dirname, 'public');
 const DOCS_DIR = path.join(__dirname, 'docs');
@@ -45,7 +46,8 @@ const serverStats = {
 // Middleware
 app.use(morgan('dev'));
 app.use(express.json());
-app.use(apiLimiter);
+// [MODIFIKASI] Pindahkan apiLimiter agar tidak membatasi redirect
+// app.use(apiLimiter); // Dihapus dari sini
 
 // Sajikan file statis (Docs, Public, Downloads)
 app.use(express.static(DOCS_DIR)); // Docs sebagai root
@@ -56,20 +58,12 @@ app.use('/downloads', express.static(TEMP_DIR));
 // RUTE KHUSUS UNTUK URL CANTIK
 // ==========================================================
 
-// Redirect root ke halaman dokumentasi utama
-app.get('/', (req, res) => {
-    res.redirect('/index.html');
-});
-
-// Rute untuk /stats agar menampilkan stats.html
-app.get('/stats', (req, res) => {
-    res.sendFile(path.join(PUBLIC_DIR, 'stats.html'));
-});
+app.get('/', (req, res) => res.redirect('/index.html'));
+app.get('/stats', (req, res) => res.sendFile(path.join(PUBLIC_DIR, 'stats.html')));
 
 
 // ==========================================================
 // BAGIAN 1: PROXY DOWNLOADER (Sistem Job Asynchronous)
-// ... (TIDAK ADA PERUBAHAN DI BAGIAN INI, BIARKAN SEPERTI ADANYA)
 // ==========================================================
 
 async function processDownloadJob(jobId) {
@@ -129,14 +123,16 @@ async function processDownloadJob(jobId) {
     }
 }
 
-app.post('/api/request-download', (req, res) => {
-    const { link, headers = {}, filenameHint } = req.body;
-    if (!link || !filenameHint) {
-        return res.status(400).json({ success: false, message: 'Parameter "link" dan "filenameHint" wajib.' });
+// [MODIFIKASI] Endpoint ini sekarang mengembalikan "Smart Redirect URL"
+app.post('/api/request-download', apiLimiter, (req, res) => { // Terapkan limiter di sini
+    // [MODIFIKASI] Ganti `filenameHint` menjadi `filename` agar konsisten
+    const { link, headers = {}, filename } = req.body;
+    if (!link || !filename) {
+        return res.status(400).json({ success: false, message: 'Parameter "link" dan "filename" wajib.' });
     }
 
     const jobId = uuidv4();
-    const safeFilename = filenameHint.replace(/\s+/g, '_').replace(/[^a-z0-9._-]/gi, '_');
+    const safeFilename = filename.replace(/\s+/g, '_').replace(/[^a-z0-9._-]/gi, '_');
     const uniqueFilename = `${jobId.split('-')[0]}-${safeFilename}`;
     
     const host = req.get('host');
@@ -146,21 +142,76 @@ app.post('/api/request-download', (req, res) => {
         id: jobId, status: 'pending', progress: 0, error: null, sourceLink: link,
         headers, filename: uniqueFilename, filePath: path.join(TEMP_DIR, uniqueFilename),
         finalUrl: `${protocol}://${host}/downloads/${uniqueFilename}`,
-        pollingUrl: `${protocol}://${host}/api/status/${jobId}`
+        // [MODIFIKASI] Ganti `pollingUrl` menjadi `smartRedirectUrl` untuk kejelasan
+        smartRedirectUrl: `${protocol}://${host}/dl/${jobId}` 
     };
 
     jobs.set(jobId, newJob);
     console.log(`[SERVER] Job baru dibuat: ${jobId} untuk file ${safeFilename}`);
 
+    // [MODIFIKASI] Respons sekarang mengembalikan `downloadUrl` yang mengarah ke Smart Redirect
     res.status(202).json({
-        success: true, message: 'Permintaan diterima! Gunakan pollingUrl untuk cek status.',
-        jobId: newJob.id, pollingUrl: newJob.pollingUrl
+        success: true,
+        message: 'Permintaan diterima! Buka `downloadUrl` untuk memulai unduhan.',
+        jobId: newJob.id,
+        downloadUrl: newJob.smartRedirectUrl // Ini yang akan digunakan API Utama
     });
 
     processDownloadJob(jobId);
 });
 
-app.get('/api/status/:jobId', (req, res) => {
+// [BARU] Smart Redirect Endpoint - Inilah Kuncinya!
+app.get('/dl/:jobId', (req, res) => {
+    const { jobId } = req.params;
+    const job = jobs.get(jobId);
+
+    if (!job) {
+        return res.status(404).send(`
+            <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+                <h1>404 - Job Tidak Ditemukan</h1>
+                <p>Link download ini tidak valid atau sudah kedaluwarsa.</p>
+            </div>
+        `);
+    }
+
+    switch (job.status) {
+        case 'completed':
+            // Jika selesai, langsung redirect ke file yang bisa di-download
+            console.log(`[REDIRECT] Job ${jobId} selesai, redirecting ke ${job.finalUrl}`);
+            res.redirect(job.finalUrl);
+            break;
+        
+        case 'processing':
+        case 'downloading':
+        case 'pending':
+            // Jika masih proses, tampilkan halaman tunggu dengan auto-refresh
+            res.setHeader('Refresh', '5'); // Refresh halaman setiap 5 detik
+            res.send(`
+                <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+                    <h1>Download Anda sedang diproses...</h1>
+                    <p>Status: ${job.status} (${job.progress || 0}%)</p>
+                    <p>Halaman ini akan me-refresh secara otomatis. Mohon tunggu.</p>
+                    <progress value="${job.progress || 0}" max="100" style="width: 50%;"></progress>
+                </div>
+            `);
+            break;
+
+        case 'failed':
+            // Jika gagal, tampilkan pesan error
+            res.status(500).send(`
+                <div style="font-family: sans-serif; text-align: center; padding-top: 50px;">
+                    <h1>500 - Download Gagal</h1>
+                    <p>Maaf, terjadi kesalahan saat memproses file Anda.</p>
+                    <p><small>Error: ${job.error || 'Unknown error'}</small></p>
+                </div>
+            `);
+            break;
+    }
+});
+
+
+// [DEPRECATED] Endpoint polling JSON masih ada untuk backward compatibility, tapi tidak lagi menjadi fokus utama
+app.get('/api/status/:jobId', apiLimiter, (req, res) => {
     const { jobId } = req.params;
     const job = jobs.get(jobId);
 
@@ -181,15 +232,13 @@ app.get('/api/status/:jobId', (req, res) => {
 
 
 // ==========================================================
-// BAGIAN 2: LIVE PROXY SERVER
-// ... (TIDAK ADA PERUBAHAN DI BAGIAN INI)
+// BAGIAN 2: LIVE PROXY SERVER (Tidak Ada Perubahan)
 // ==========================================================
-app.get('/proxy', async (req, res) => {
+app.get('/proxy', apiLimiter, async (req, res) => {
     const targetUrl = req.query.url;
     if (!targetUrl) {
         return res.status(400).send('<h1>Parameter URL "url" wajib ada.</h1><p>Contoh: /proxy?url=https://example.com</p>');
     }
-
     try {
         console.log(`[PROXY] Meminta ke: ${targetUrl}`);
         const response = await axios({
@@ -212,8 +261,7 @@ app.get('/proxy', async (req, res) => {
 });
 
 // ==========================================================
-// BAGIAN 3: STATS DASHBOARD API
-// ... (TIDAK ADA PERUBAHAN DI BAGIAN INI)
+// BAGIAN 3: STATS DASHBOARD API (Tidak Ada Perubahan)
 // ==========================================================
 app.get('/api/stats', (req, res) => {
     const currentJobs = Array.from(jobs.values());
@@ -244,9 +292,9 @@ Promise.all([
     fsp.mkdir(DOCS_DIR, { recursive: true })
 ]).then(() => {
     app.listen(PORT, '0.0.0.0', () => {
-        console.log(`[SERVER] Kitsune Proxy Hub siap!`);
+        console.log(`[SERVER] Kitsune Proxy Hub siap! (Mode Smart Redirect Aktif)`);
         console.log(`> Dokumentasi & Main: http://localhost:${PORT}/`);
-        console.log(`> Dashboard Stats:    http://localhost:${PORT}/stats`); // <-- URL SUDAH DIPERBAIKI
+        console.log(`> Dashboard Stats:    http://localhost:${PORT}/stats`);
         console.log(`> Live Proxy:         http://localhost:${PORT}/proxy?url=...`);
         console.log(`> Downloader API:     POST http://localhost:${PORT}/api/request-download`);
         console.log(`Server listen di 0.0.0.0:${PORT} untuk akses eksternal.`);
