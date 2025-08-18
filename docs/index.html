@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Kitsune Proxy Hub // Documentation</title>
+    <link rel="icon" href="kitsune-mask.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&family=Source+Code+Pro:wght@400;600&display=swap" rel="stylesheet">
@@ -25,7 +26,7 @@
 
         <section class="api-section">
             <h2 data-text="[ Live Proxy ]">[ Live Proxy ]</h2>
-            <p>Stream konten secara langsung melalui server kami. Gunakan endpoint ini untuk akses sinkron dan cepat tanpa penyimpanan file.</p>
+            <p>Stream konten secara langsung melalui server kami. Endpoint ini ideal untuk akses cepat tanpa perlu menyimpan file di server.</p>
             <div class="endpoint">
                 <span class="method get">GET</span>
                 <span class="path">/proxy</span>
@@ -42,8 +43,9 @@
         </section>
 
         <section class="api-section">
-            <h2 data-text="[ Async Downloader ]">[ Async Downloader ]</h2>
-            <p>Untuk file besar atau download yang butuh waktu. Sistem ini bekerja di latar belakang. Anda meminta download, lalu memeriksa statusnya secara berkala.</p>
+            <h2 data-text="[ Smart Downloader ]">[ Smart Downloader ]</h2>
+            <p>Untuk file besar atau unduhan yang memerlukan header khusus. Sistem ini bekerja di latar belakang dan secara otomatis mengarahkan Anda ke file ketika sudah siap.</p>
+            
             <h3 class="subsection-title">// Langkah 1: Meminta Download</h3>
             <div class="endpoint">
                 <span class="method post">POST</span>
@@ -53,37 +55,29 @@
             <div class="code-block-container">
                 <pre><code class="language-json">{
     "link": "https_URL_FILE_TARGET",
-    "filenameHint": "nama_file_yang_diinginkan.zip",
-    "headers": { "Optional-Header": "value" }
+    "filename": "nama_file_yang_diinginkan.mp3",
+    "headers": { "Referer": "https://situs-asal.com/" }
 }</code></pre>
                 <button class="copy-btn">COPY</button>
             </div>
+            
              <h4>Contoh Response:</h4>
+            <p>Server akan langsung merespons dengan URL unduhan pintar (`downloadUrl`).</p>
             <div class="code-block-container">
                 <pre><code class="language-json">{
     "success": true,
-    "message": "Permintaan diterima! Gunakan pollingUrl untuk cek status.",
-    "jobId": "...",
-    "pollingUrl": "<span class="dynamic-domain"></span>/api/status/..."
+    "message": "Permintaan diterima! Buka `downloadUrl` untuk memulai unduhan.",
+    "jobId": "a1b2c3d4-...",
+    "downloadUrl": "<span class="dynamic-domain"></span>/dl/a1b2c3d4-..."
 }</code></pre>
                 <button class="copy-btn">COPY</button>
             </div>
-            <h3 class="subsection-title">// Langkah 2: Cek Status (Polling)</h3>
+
+            <h3 class="subsection-title">// Langkah 2: Buka Smart Redirect URL</h3>
+            <p>Cukup buka <code>downloadUrl</code> yang Anda terima di browser. Halaman akan menampilkan status proses dan me-refresh secara otomatis. Ketika unduhan selesai, Anda akan langsung diarahkan ke file tersebut.</p>
             <div class="endpoint">
                 <span class="method get">GET</span>
-                <span class="path">/api/status/:jobId</span>
-            </div>
-            <p>Gunakan <code>pollingUrl</code> dari response sebelumnya untuk memeriksa status job.</p>
-             <h4>Contoh Response (Completed):</h4>
-            <div class="code-block-container">
-                <pre><code class="language-json">{
-    "success": true,
-    "status": "completed",
-    "message": "Download Selesai!",
-    "downloadLink": "<span class="dynamic-domain"></span>/downloads/...",
-    "filename": "..."
-}</code></pre>
-                <button class="copy-btn">COPY</button>
+                <span class="path">/dl/:jobId</span>
             </div>
         </section>
 
@@ -92,7 +86,7 @@
             <p>Pantau aktivitas server secara real-time melalui dashboard web dan API statistik.</p>
             <div class="endpoint">
                 <span class="method get">GET</span>
-                <span class="path">/stats.html</span>
+                <span class="path">/stats</span>
             </div>
             <p>Buka URL di atas di browser Anda untuk melihat dashboard visual.</p>
             <br>
@@ -104,7 +98,7 @@
         </section>
         
         <footer>
-            <p>&copy; 2024 Kitsune Proxy Hub // Connection Secured</p>
+            <p>&copy; 2025 Kitsune Proxy Hub // Connection Secured</p>
         </footer>
     </main>
     <script src="script.js"></script>
